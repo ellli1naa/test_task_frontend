@@ -1,0 +1,129 @@
+---
+// src/pages/index.astro
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout>
+  <main class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-center mb-8">WebGPU Report</h1>
+    
+    <div id="webgpu-report-container">
+      <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-6">
+        <p class="font-bold">WebGPU Detection</p>
+        <p id="status-message">Initializing WebGPU detection...</p>
+      </div>
+    </div>
+    
+    <div class="mt-8 text-center text-sm text-gray-500">
+      <p>Report generated on {new Date().toLocaleString()}</p>
+      <p class="mt-2">For more information about WebGPU, visit <a href="https://gpuweb.github.io/gpuweb/" class="text-blue-600 hover:underline" target="_blank">WebGPU specification</a></p>
+    </div>
+  </main>
+
+  <script is:inline>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const container = document.getElementById('webgpu-report-container');
+      const statusMessage = document.getElementById('status-message');
+      
+      const updateStatus = (message, isError = false) => {
+        statusMessage.textContent = message;
+        if (isError) {
+          statusMessage.classList.add('text-red-700');
+          statusMessage.classList.remove('text-blue-700');
+        }
+      };
+
+      try {
+        updateStatus('Loading WebGPU detector...');
+        
+        // Используем абсолютный путь к компоненту
+        const { getWebGPUInfo } = await import('/src/components/WebGPUInfo.js');
+        
+        updateStatus('Detecting WebGPU support...');
+        const webGPUInfo = await getWebGPUInfo();
+        
+        if (webGPUInfo.isAvailable) {
+          container.innerHTML = `
+            <div class="mb-6">
+              <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4">
+                <p class="font-bold">WebGPU is available!</p>
+              </div>
+              
+              <div id="adapter-info"></div>
+              <div id="features-info" class="mt-6"></div>
+              <div id="limits-info" class="mt-6"></div>
+            </div>
+          `;
+          
+          // Функция для создания карточек
+          const createCard = (title, items, type = 'info') => {
+            const content = type === 'features' 
+              ? items.map(item => `
+                  <div class="px-4 py-3 flex justify-between items-center">
+                    <div><h3 class="font-medium">${item.name}</h3></div>
+                    <span class="px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">
+                      Supported
+                    </span>
+                  </div>
+                `).join('')
+              : Object.entries(items).map(([key, value]) => `
+                  <div class="px-4 py-3">
+                    <div class="flex justify-between">
+                      <span class="font-medium">${key}</span>
+                      <span class="text-gray-600">${value}</span>
+                    </div>
+                  </div>
+                `).join('');
+            
+            return `
+              <div class="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+                <div class="bg-gray-800 text-white px-4 py-3">
+                  <h2 class="text-lg font-semibold">${title}</h2>
+                </div>
+                <div class="divide-y divide-gray-200">${content}</div>
+              </div>
+            `;
+          };
+
+          // Заполняем информацию
+          document.getElementById('adapter-info').innerHTML = createCard(
+            'Adapter Information',
+            {
+              'Vendor': webGPUInfo.adapterInfo?.vendor || 'Unknown',
+              'Architecture': webGPUInfo.adapterInfo?.architecture || 'Unknown',
+              'Device': webGPUInfo.adapterInfo?.device || 'Unknown',
+              'Description': webGPUInfo.adapterInfo?.description || 'Unknown'
+            }
+          );
+
+          document.getElementById('features-info').innerHTML = createCard(
+            'Features',
+            webGPUInfo.features,
+            'features'
+          );
+
+          document.getElementById('limits-info').innerHTML = createCard(
+            'Limits',
+            webGPUInfo.limits
+          );
+        } else {
+          container.innerHTML = `
+            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">
+              <p class="font-bold">WebGPU is not available</p>
+              <p>${webGPUInfo.error || 'WebGPU is not supported in your browser'}</p>
+            </div>
+          `;
+        }
+      } catch (error) {
+        console.error('WebGPU detection error:', error);
+        updateStatus(`Error: ${error.message}`, true);
+        container.innerHTML += `
+          <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mt-4">
+            <p class="font-bold">Technical Details</p>
+            <p class="text-sm">${error.stack || error.toString()}</p>
+          </div>
+        `;
+      }
+    });
+  </script>
+</Layout>

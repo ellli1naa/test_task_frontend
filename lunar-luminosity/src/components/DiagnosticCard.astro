@@ -1,0 +1,53 @@
+---
+import type { WebGPUFeature, WebGPULimits } from './WebGPUInfo';
+
+export interface Props {
+  title: string;
+  items: { [key: string]: any } | WebGPUFeature[] | WebGPULimits;
+  type?: 'features' | 'limits' | 'info';
+}
+
+const { title, items, type = 'info' } = Astro.props;
+---
+
+<div class="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+  <div class="bg-gray-800 text-white px-4 py-3">
+    <h2 class="text-lg font-semibold">{title}</h2>
+  </div>
+  
+  <div class="divide-y divide-gray-200">
+    {
+      type === 'features' ? (
+        (items as WebGPUFeature[]).map((feature) => (
+          <div class="px-4 py-3 flex justify-between items-center">
+            <div>
+              <h3 class="font-medium">{feature.name}</h3>
+              {feature.description && <p class="text-sm text-gray-500">{feature.description}</p>}
+            </div>
+            <span class={`px-2 py-1 rounded text-xs font-semibold ${feature.supported ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+              {feature.supported ? 'Supported' : 'Not Supported'}
+            </span>
+          </div>
+        ))
+      ) : type === 'limits' ? (
+        Object.entries(items as WebGPULimits).map(([key, value]) => (
+          <div class="px-4 py-3">
+            <div class="flex justify-between">
+              <span class="font-medium">{key}</span>
+              <span class="text-gray-600">{value}</span>
+            </div>
+          </div>
+        ))
+      ) : (
+        Object.entries(items).map(([key, value]) => (
+          <div class="px-4 py-3">
+            <div class="flex justify-between">
+              <span class="font-medium">{key}</span>
+              <span class="text-gray-600">{value}</span>
+            </div>
+          </div>
+        ))
+      )
+    }
+  </div>
+</div>
